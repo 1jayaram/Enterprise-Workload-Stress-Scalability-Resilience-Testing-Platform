@@ -1,0 +1,13 @@
+services:
+  scheduler:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      APP_DB_PATH: data/scheduler.db
+      APP_WORKERS: 4
+      APP_CPU_CAPACITY: 8
+      APP_MEMORY_MB: 8192
+    volumes:
+      - scheduler-data:/app/data
+volumes:
+  scheduler-data:
