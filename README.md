@@ -1,168 +1,259 @@
 # Enterprise Workload Stress, Scalability & Resilience Testing Platform
 
-A Python workload-scheduler simulator plus an automated QA platform. It demonstrates priority queues, resource-aware dispatch, worker slots, REST/CLI interfaces, persistence, load generation, process monitoring, fault simulation, and performance regression checks.
+A Python-based workload management and quality assurance platform designed to evaluate API reliability, concurrent job processing, workload scheduling, system performance and application behaviour under varying workloads.
 
-**Scope:** a local multi-worker simulator. Workers execute in threads within one API process; this is not a production distributed scheduler. The project is designed to demonstrate QA engineering fundamentals and provide a base for process-level worker orchestration.
+## Project Overview
 
-## Stack
-Python 3.12, FastAPI, SQLite/WAL, Pytest, HTTPX, Locust, psutil, Matplotlib, Docker, GitHub Actions.
+The **Enterprise Workload Stress, Scalability & Resilience Testing Platform** is a software testing project that combines backend development, automated testing and performance engineering.
 
-## Phase 1 — Environment
+The platform provides REST APIs for submitting and monitoring workloads, manages job execution through a worker-based scheduler, and uses automated testing tools to evaluate application behaviour.
 
-In VS Code terminal (PowerShell):
+The objective is to move beyond basic functional testing and explore how an application performs under concurrent requests and sustained workloads.
+
+## Key Features
+
+- **REST API Development:** FastAPI endpoints for workload submission, cluster monitoring and job management.
+- **Workload Scheduling:** Worker-based execution and resource-capacity management.
+- **Job Lifecycle Management:** Submission, execution, monitoring and cancellation of workloads.
+- **Database Integration:** SQLite-based persistence for workload information and job states.
+- **Automated Testing:** Pytest-based API and recovery test cases.
+- **Load Testing:** Locust-based simulation of concurrent users and API requests.
+- **Performance Monitoring:** Response-time, throughput and failure-rate analysis.
+- **Resource Monitoring:** Process monitoring and performance metrics using psutil.
+- **Stress and Endurance Testing:** Scripts for evaluating application behaviour under different workload patterns.
+- **Containerisation:** Docker and Docker Compose configuration.
+- **Continuous Integration:** GitHub Actions workflow for automated test execution.
+
+## Technology Stack
+
+| Category | Technologies |
+|---|---|
+| Programming Language | Python |
+| Backend Framework | FastAPI |
+| Database | SQLite |
+| Testing Framework | Pytest |
+| Performance Testing | Locust |
+| Monitoring | psutil |
+| API Communication | REST / HTTP |
+| Containerisation | Docker |
+| CI/CD | GitHub Actions |
+
+## System Architecture
+
+The platform consists of three main components:
+
+### 1. Workload Management Backend
+
+The backend handles incoming API requests, job submission, workload scheduling, worker execution and database operations.
+
+### 2. Quality Assurance and Monitoring
+
+The QA component generates workloads, collects execution information, monitors performance and produces test results.
+
+### 3. Performance Testing
+
+Locust simulates concurrent users interacting with the backend APIs. Performance metrics are collected to evaluate throughput, response times and request failures.
+
+```text
+              Locust Load Generator
+                       |
+                       v
+                FastAPI Backend
+                       |
+              Workload Scheduler
+                       |
+                Worker Pool
+                       |
+                 SQLite DB
+                       |
+                       v
+             QA & Monitoring Layer
+                       |
+             Performance Reports
+```
+
+## Project Structure
+
+```text
+enterprise-workload-qa-platform/
+│
+├── workload_platform/       # Backend application
+├── qa_platform/             # QA and monitoring modules
+├── tests/                   # Automated test cases
+├── scripts/                 # Stress and endurance tests
+├── .github/workflows/       # CI configuration
+│
+├── locustfile.py            # Locust workload definition
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── pytest.ini
+├── .gitignore
+└── README.md
+```
+
+## Installation and Setup
+
+### Prerequisites
+
+- Python 3.10 or later (use a version compatible with the dependencies)
+- pip
+- Git
+- VS Code (recommended)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/YOUR-USERNAME/enterprise-workload-qa-platform.git
+cd enterprise-workload-qa-platform
+```
+
+### 2. Create a virtual environment
+
+Windows PowerShell:
 
 ```powershell
-conda create -n workload-qa python=3.12 -y
-conda activate workload-qa
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
+
+```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-New-Item -ItemType Directory -Force data,reports
 ```
 
-## Phase 2 — Start the scheduler
+## Running the Application
 
-```powershell
-uvicorn workload_platform.api:app --reload
+Start the FastAPI backend:
+
+```bash
+python -m uvicorn workload_platform.api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Swagger API documentation: http://127.0.0.1:8000/docs
+The backend will be available at:
 
-Health check:
+- Health: http://127.0.0.1:8000/health
+- Cluster information: http://127.0.0.1:8000/cluster
+- Job management: http://127.0.0.1:8000/jobs
+- API documentation: http://127.0.0.1:8000/docs
 
-```powershell
-curl.exe http://127.0.0.1:8000/health
+Keep the backend terminal running while executing tests.
+
+## Automated Testing
+
+Run the Pytest test suite:
+
+```bash
+python -m pytest tests/ -v
 ```
 
-## Phase 3 — Submit and inspect jobs
+Generate an HTML test report if the pytest-html dependency is installed:
 
-Open a second terminal:
-
-```powershell
-python -m workload_platform.cli submit demo-job --duration 2 --cpu 1 --memory 256 --priority 5
-python -m workload_platform.cli jobs
-python -m workload_platform.cli cluster
+```bash
+python -m pytest tests/ -v --html=reports/test-report.html --self-contained-html
 ```
 
-The API also supports `POST /jobs`, `GET /jobs`, `GET /jobs/{id}`, `DELETE /jobs/{id}`, and `GET /cluster`.
+## Performance and Load Testing
 
-## Phase 4 — Automated tests
+Start Locust:
 
-```powershell
-pytest -v
-pytest --cov=workload_platform --cov-report=term-missing
-```
-
-Tests cover API health, submission, invalid payloads, resource admission, missing jobs, filters, cluster status, and restart recovery.
-
-## Phase 5 — Concurrent load experiment
-
-Keep the API running:
-
-```powershell
-python -m qa_platform.runner --jobs 100 --concurrency 10 --duration 0.05
-```
-
-Output: `reports/latest.json`. The report includes measured request latency (mean/p50/p95/p99), completed-job throughput, submission errors and process CPU/memory samples. Values are measured on your machine; no performance results are hardcoded.
-
-## Phase 6 — Visualize performance
-
-```powershell
-python -m qa_platform.plot_report reports/latest.json
-```
-
-Graph: `reports/latency.png`.
-
-## Phase 7 — Spike test
-
-```powershell
-python scripts/spike_test.py
-```
-
-This submits a normal batch, then a 10x burst. Observe queue drain time and terminal states.
-
-## Phase 8 — Endurance test
-
-First validate for two minutes:
-
-```powershell
-python scripts/endurance_test.py --minutes 2 --batch 30
-```
-
-Then perform the full one-hour run:
-
-```powershell
-python scripts/endurance_test.py --minutes 60 --batch 100
-```
-
-Monitor memory and failures throughout.
-
-## Phase 9 — Fault injection
-
-```powershell
-python scripts/fault_injection.py
-```
-
-This injects task-level failures using a probability field. It is not equivalent to killing a worker operating-system process; process-kill testing is a further extension.
-
-## Phase 10 — Locust load test
-
-```powershell
+```bash
 locust -f locustfile.py --host http://127.0.0.1:8000
 ```
 
-Open the local URL printed by Locust. Start with 10 users, then increase gradually (e.g. 25, 50, 100). Record request rate, failures, median and p95 response time.
+Open the Locust interface:
 
-## Phase 11 — Performance regression
+http://localhost:8089
 
-Save the baseline:
+Configure the number of users and spawn rate, then start the test.
 
-```powershell
-Copy-Item reports/latest.json reports/baseline.json
+### Spike Testing
+
+```bash
+python -m scripts.spike_test
 ```
 
-Run the exact same workload after a code change, then compare:
+### Endurance Testing
 
-```powershell
-python -m qa_platform.regression reports/baseline.json reports/latest.json
+```bash
+python -m scripts.endurance_test --minutes 2 --batch 30
 ```
 
-The default rule flags more than 15% degradation in mean, p95 or p99 API submission latency.
+### Fault Injection
 
-## Phase 12 — Docker and CI
-
-```powershell
-docker compose up --build
+```bash
+python -m scripts.fault_injection
 ```
 
-Visit http://localhost:8000/docs. GitHub Actions runs the Pytest suite on pushes and pull requests.
+Use the actual command-line arguments supported by each script if they differ from these examples.
 
-## Experiment plan
+## Performance Testing Results
 
-| Test | Workload | Measurements |
-|---|---|---|
-| Baseline | 100 jobs, 10 clients | Mean/p95/p99, throughput |
-| Load | 100 / 500 / 1,000 jobs | Latency, errors |
-| Scalability | 1 / 2 / 4 / 8 workers | Throughput, scaling efficiency |
-| Stress | Increase Locust users | First sustained error/timeout |
-| Spike | 20 then 200 jobs | Queue drain and recovery |
-| Endurance | 60 minutes | Memory trend, error trend |
-| Fault | 25% task failure probability | Completed/failed counts |
-| Regression | Same workload, two builds | Percent deviation |
+An initial Locust test was conducted against the local FastAPI application with 10 concurrent users.
 
-## Limitations and next engineering upgrades
+### Observed Results
 
-- Worker execution currently uses a thread pool in one process. True worker-process kill/restart requires a separate worker executable, heartbeats and leases.
-- Restart recovery requeues jobs marked running; this is at-least-once behavior, not exactly-once execution. Production designs need idempotency keys and durable execution attempts.
-- SQLite is suitable for a local simulator. Multi-instance deployments should use PostgreSQL or another server database.
-- Resource reservations use requested CPU/RAM values; they do not enforce OS-level resource limits.
-- Add race-condition tests, fairness tests, repeated restart tests, worker heartbeat expiry, API timeout/network interruption, and process-level fault injection before describing this as production-grade resilience.
+| Metric | Result |
+|---|---:|
+| Concurrent Users | 10 |
+| Total Requests | 5,922 |
+| Requests Per Second | 27.1 |
+| Failure Rate | 0% |
+| Average Response Time | 46.83 ms |
+| Median Response Time | 40 ms |
+| 95th Percentile | 100 ms |
+| 99th Percentile | 170 ms |
 
-## Resume description
+### Endpoint-Level Results
 
-**Enterprise Workload Stress, Scalability & Resilience Testing Platform | Python, FastAPI, Pytest, SQLite, Locust, psutil, Docker**
-- Developed a resource-aware workload scheduler featuring priority-based queuing, worker allocation, job lifecycle management and persistent state.
-- Built automated API and recovery tests covering invalid inputs, resource constraints, cancellation, persistence and restart behavior.
-- Implemented concurrent workload generation and monitoring to measure latency, throughput, CPU and memory consumption.
-- Created repeatable spike, endurance and task-failure experiments with JSON reporting and automated performance-regression thresholds.
+| Endpoint | Requests | Failures | Average Response |
+|---|---:|---:|---:|
+| GET /cluster | 884 | 0 | 22.94 ms |
+| POST /jobs | 4,036 | 0 | 55.18 ms |
+| GET /jobs?limit=100 | 1,002 | 0 | 34.26 ms |
 
-Add numeric achievements to your resume only after running the experiments and recording the results.
+**Observation:** During this particular test run, all 5,922 recorded requests completed without reported failures. The aggregated average response time was 46.83 ms.
+
+These figures represent one local test run and should not be interpreted as production capacity or a validated scalability limit. Results can vary with hardware, database state, workload configuration and test duration.
+
+## Engineering Concepts Explored
+
+- Functional API testing
+- Concurrent request handling
+- Workload scheduling
+- Resource-capacity management
+- Job lifecycle validation
+- Performance benchmarking
+- Response-time percentile analysis
+- Failure-rate monitoring
+- Recovery and reliability testing
+- Continuous integration
+
+## Future Improvements
+
+- Increase concurrency and evaluate system behaviour at 25, 50 and 100 users.
+- Implement deeper CPU and memory monitoring of the backend process.
+- Introduce process-level worker isolation.
+- Add heartbeat monitoring and automatic worker recovery.
+- Implement retry mechanisms and idempotent job submission.
+- Expand fault injection to simulate worker and network failures.
+- Add automated performance regression comparisons.
+- Develop a dedicated web dashboard for real-time monitoring.
+
+## Project Scope and Limitations
+
+The current implementation uses a local FastAPI application, SQLite persistence and an in-process worker scheduler. It is intended as an engineering and QA testing platform, not a production-grade distributed orchestration system.
+
+The reported performance results are specific to the local development environment.
+
+## Author
+
+**Jayaram S**
+
+Software Quality Assurance | Python | API Testing | Performance Engineering | Automation Testing
+
+## License
+
+This project is available under the MIT License. Add a `LICENSE` file to the repository if you intend to distribute it under that license.
